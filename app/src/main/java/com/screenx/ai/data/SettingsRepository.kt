@@ -5,8 +5,12 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.screenx.ai.domain.AudioSource
+import com.screenx.ai.domain.CameraLens
+import com.screenx.ai.domain.FacecamConfig
+import com.screenx.ai.domain.FacecamShape
 import com.screenx.ai.domain.FloatingConfig
 import com.screenx.ai.domain.RecordingConfig
 import com.screenx.ai.domain.VideoOrientation
@@ -30,6 +34,15 @@ class SettingsRepository(context: Context) {
         val FLOAT_OPACITY = intPreferencesKey("float_opacity")
         val FLOAT_X = intPreferencesKey("float_x")
         val FLOAT_Y = intPreferencesKey("float_y")
+        val CAM_ENABLED = booleanPreferencesKey("cam_enabled")
+        val CAM_LENS = stringPreferencesKey("cam_lens")
+        val CAM_SHAPE = stringPreferencesKey("cam_shape")
+        val CAM_SIZE = intPreferencesKey("cam_size")
+        val CAM_X = intPreferencesKey("cam_x")
+        val CAM_Y = intPreferencesKey("cam_y")
+        val DRAW_ENABLED = booleanPreferencesKey("draw_enabled")
+        val FAVORITES = stringSetPreferencesKey("favorite_files")
+        val SHOT_DELAY = intPreferencesKey("screenshot_delay_sec")
     }
 
     val recordingConfig: Flow<RecordingConfig> = store.data.map { p ->
@@ -55,6 +68,41 @@ class SettingsRepository(context: Context) {
         )
     }
 
+    val facecamConfig: Flow<FacecamConfig> = store.data.map { p ->
+        FacecamConfig(
+            enabled = p[Keys.CAM_ENABLED] ?: false,
+            lens = runCatching { CameraLens.valueOf(p[Keys.CAM_LENS] ?: "FRONT") }
+                .getOrDefault(CameraLens.FRONT),
+            shape = runCatching { FacecamShape.valueOf(p[Keys.CAM_SHAPE] ?: "CIRCLE") }
+                .getOrDefault(FacecamShape.CIRCLE),
+            sizeLevel = p[Keys.CAM_SIZE] ?: 1,
+            x = p[Keys.CAM_X] ?: -1,
+            y = p[Keys.CAM_Y] ?: -1
+        )
+    }
+
+    val drawingEnabled: Flow<Boolean> = store.data.map { p -> p[Keys.DRAW_ENABLED] ?: false }
+
+    val favorites: Flow<Set<String>> = store.data.map { p -> p[Keys.FAVORITES] ?: emptySet() }
+
+    val screenshotDelaySec: Flow<Int> = store.data.map { p -> p[Keys.SHOT_DELAY] ?: 3 }
+
+    suspend fun setFavorite(fileName: String, favorite: Boolean) {
+        store.edit {
+            val current = it[Keys.FAVORITES] ?: emptySet()
+            it[Keys.FAVORITES] = if (favorite) current + fileName else current - fileName
+        }
+    }
+
+    suspend fun renameFavorite(oldName: String, newName: String) {
+        store.edit {
+            val current = it[Keys.FAVORITES] ?: emptySet()
+            if (oldName in current) it[Keys.FAVORITES] = current - oldName + newName
+        }
+    }
+
+    suspend fun setScreenshotDelay(seconds: Int) { store.edit { it[Keys.SHOT_DELAY] = seconds } }
+
     suspend fun setResolution(p: Int) { store.edit { it[Keys.RESOLUTION] = p } }
     suspend fun setFps(fps: Int) { store.edit { it[Keys.FPS] = fps } }
     suspend fun setBitrateKbps(kbps: Int) { store.edit { it[Keys.BITRATE_KBPS] = kbps } }
@@ -69,6 +117,19 @@ class SettingsRepository(context: Context) {
         store.edit {
             it[Keys.FLOAT_X] = x
             it[Keys.FLOAT_Y] = y
+        }
+    }
+
+    suspend fun setDrawingEnabled(enabled: Boolean) { store.edit { it[Keys.DRAW_ENABLED] = enabled } }
+
+    suspend fun setFacecamEnabled(enabled: Boolean) { store.edit { it[Keys.CAM_ENABLED] = enabled } }
+    suspend fun setFacecamLens(lens: CameraLens) { store.edit { it[Keys.CAM_LENS] = lens.name } }
+    suspend fun setFacecamShape(shape: FacecamShape) { store.edit { it[Keys.CAM_SHAPE] = shape.name } }
+    suspend fun setFacecamSize(level: Int) { store.edit { it[Keys.CAM_SIZE] = level } }
+    suspend fun setFacecamPosition(x: Int, y: Int) {
+        store.edit {
+            it[Keys.CAM_X] = x
+            it[Keys.CAM_Y] = y
         }
     }
 }

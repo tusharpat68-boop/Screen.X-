@@ -3,6 +3,7 @@ package com.screenx.ai.permissions
 import android.Manifest
 import android.app.Activity
 import android.media.projection.MediaProjectionManager
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,21 +21,24 @@ import com.screenx.ai.service.RecordingService
 /**
  * Returns a function that runs the full start flow:
  * 1) notification permission (Android 13+), 2) microphone permission if audio is selected,
- * 3) system screen-capture consent, 4) start the service.
- * The consent dialog is always shown by Android and cannot be skipped.
+ * 3) camera permission if the face camera is on, 4) system screen-capture consent, 5) start.
+ * The consent dialog is always shown by Android and cannot be skipped. If the user denies an
+ * optional permission, the recording still starts without that feature.
  */
 @Composable
-fun rememberRecordingStarter(audioSource: AudioSource): () -> Unit {
+fun rememberRecordingStarter(audioSource: AudioSource, facecamEnabled: Boolean): () -> Unit {
     val context = LocalContext.current
-    val requested by rememberUpdatedState(audioSource)
-    var effective by remember { mutableStateOf(AudioSource.NONE) }
+    val requestedAudio by rememberUpdatedState(audioSource)
+    val requestedFacecam by rememberUpdatedState(facecamEnabled)
+    var effectiveAudio by remember { mutableStateOf(AudioSource.NONE) }
+    var effectiveFacecam by remember { mutableStateOf(false) }
 
     val consentLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         val data = result.data
         if (result.resultCode == Activity.RESULT_OK && data != null) {
-            RecordingService.start(context, result.resultCode, data, effective)
+            RecordingService.start(context, result.resultCode, data, effectiveAudio, effectiveFacecam)
         }
     }
 
@@ -43,22 +47,44 @@ fun rememberRecordingStarter(audioSource: AudioSource): () -> Unit {
         consentLauncher.launch(manager.createScreenCaptureIntent())
     }
 
-    val audioPermissionLauncher = rememberLauncherForActivityResult(
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (!granted) {
-            effective = AudioSource.NONE
-            Toast.makeText(context, R.string.perm_audio_denied, Toast.LENGTH_LONG).show()
+            effectiveFacecam = false
+            Toast.makeText(context, R.string.perm_camera_denied, Toast.LENGTH_LONG).show()
         }
         launchConsent()
     }
 
-    fun continueAfterNotifications() {
-        effective = requested
-        if (effective != AudioSource.NONE && !PermissionHelper.hasAudioPermission(context)) {
-            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+    fun continueAfterAudio() {
+        if (effectiveFacecam && !PermissionHelper.hasCameraPermission(context)) {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         } else {
             launchConsent()
+        }
+    }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            effectiveAudio = AudioSource.NONE
+            Toast.makeText(context, R.string.perm_audio_denied, Toast.LENGTH_LONG).show()
+        }
+        continueAfterAudio()
+    }
+
+    fun continueAfterNotifications() {
+        effectiveAudio = requestedAudio
+        effectiveFacecam = requestedFacecam && Settings.canDrawOverlays(context)
+        if (requestedFacecam && !effectiveFacecam) {
+            Toast.makeText(context, R.string.warn_facecam_overlay, Toast.LENGTH_LONG).show()
+        }
+        if (effectiveAudio != AudioSource.NONE && !PermissionHelper.hasAudioPermission(context)) {
+            audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            continueAfterAudio()
         }
     }
 

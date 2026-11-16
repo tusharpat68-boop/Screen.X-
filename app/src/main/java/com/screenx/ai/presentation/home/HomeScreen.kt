@@ -59,7 +59,11 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.screenx.ai.R
+import com.screenx.ai.camera.CameraCapabilities
 import com.screenx.ai.domain.AudioSource
+import com.screenx.ai.domain.CameraLens
+import com.screenx.ai.domain.FacecamConfig
+import com.screenx.ai.domain.FacecamShape
 import com.screenx.ai.domain.FloatingConfig
 import com.screenx.ai.domain.QualityOptions
 import com.screenx.ai.domain.RecordingConfig
@@ -88,12 +92,20 @@ fun HomeScreen(
     val recording by viewModel.recording.collectAsStateWithLifecycle()
     val config by viewModel.config.collectAsStateWithLifecycle()
     val floating by viewModel.floating.collectAsStateWithLifecycle()
+    val facecam by viewModel.facecam.collectAsStateWithLifecycle()
+    val drawingEnabled by viewModel.drawingEnabled.collectAsStateWithLifecycle()
     val options by viewModel.options.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val startRecording = rememberRecordingStarter(config.audioSource)
+    val cameras = remember { CameraCapabilities.available(context) }
 
     var overlayGranted by remember { mutableStateOf(Settings.canDrawOverlays(context)) }
     val enableFloating = rememberOverlayEnabler { viewModel.setFloatingEnabled(true) }
+    val enableFacecam = rememberOverlayEnabler { viewModel.setFacecamEnabled(true) }
+    val enableDrawing = rememberOverlayEnabler { viewModel.setDrawingEnabled(true) }
+    val startRecording = rememberRecordingStarter(
+        audioSource = config.audioSource,
+        facecamEnabled = facecam.enabled && overlayGranted && cameras.isNotEmpty()
+    )
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refresh()
@@ -150,6 +162,22 @@ fun HomeScreen(
             onToggle = { on -> if (on) enableFloating() else viewModel.setFloatingEnabled(false) },
             onSize = viewModel::setFloatingSize,
             onOpacity = viewModel::setFloatingOpacity
+        )
+        FacecamCard(
+            config = facecam,
+            cameras = cameras,
+            overlayGranted = overlayGranted,
+            enabled = !recording.isActive,
+            onToggle = { on -> if (on) enableFacecam() else viewModel.setFacecamEnabled(false) },
+            onLens = viewModel::setFacecamLens,
+            onShape = viewModel::setFacecamShape,
+            onSize = viewModel::setFacecamSize
+        )
+        DrawingCard(
+            enabledSetting = drawingEnabled,
+            overlayGranted = overlayGranted,
+            enabled = !recording.isActive,
+            onToggle = { on -> if (on) enableDrawing() else viewModel.setDrawingEnabled(false) }
         )
         StorageCard(state)
         SectionHeader(stringResource(R.string.home_quick_access))
@@ -479,6 +507,122 @@ private fun FloatingCard(
             )
             Text(
                 text = stringResource(R.string.floating_note),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FacecamCard(
+    config: FacecamConfig,
+    cameras: List<CameraLens>,
+    overlayGranted: Boolean,
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onLens: (CameraLens) -> Unit,
+    onShape: (FacecamShape) -> Unit,
+    onSize: (Int) -> Unit
+) {
+    val hasCamera = cameras.isNotEmpty()
+    val on = config.enabled && overlayGranted && hasCamera
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.home_facecam),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(
+                        if (hasCamera) R.string.facecam_enable else R.string.facecam_no_camera
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(checked = on, onCheckedChange = onToggle, enabled = enabled && hasCamera)
+        }
+        if (on) {
+            ChipRow(
+                title = stringResource(R.string.facecam_camera),
+                items = cameras,
+                selected = config.lens,
+                enabled = enabled,
+                labelOf = {
+                    stringResource(if (it == CameraLens.FRONT) R.string.lens_front else R.string.lens_back)
+                },
+                onSelect = onLens
+            )
+            ChipRow(
+                title = stringResource(R.string.facecam_shape),
+                items = FacecamShape.values().toList(),
+                selected = config.shape,
+                enabled = enabled,
+                labelOf = {
+                    stringResource(
+                        if (it == FacecamShape.CIRCLE) R.string.shape_circle else R.string.shape_rectangle
+                    )
+                },
+                onSelect = onShape
+            )
+            ChipRow(
+                title = stringResource(R.string.floating_size),
+                items = FacecamConfig.SIZES,
+                selected = config.sizeLevel,
+                enabled = enabled,
+                labelOf = {
+                    stringResource(
+                        when (it) {
+                            0 -> R.string.size_small
+                            2 -> R.string.size_large
+                            3 -> R.string.size_xlarge
+                            else -> R.string.size_medium
+                        }
+                    )
+                },
+                onSelect = onSize
+            )
+            Text(
+                text = stringResource(R.string.facecam_note),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DrawingCard(
+    enabledSetting: Boolean,
+    overlayGranted: Boolean,
+    enabled: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    val on = enabledSetting && overlayGranted
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.home_drawing),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = stringResource(R.string.drawing_enable),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Switch(checked = on, onCheckedChange = onToggle, enabled = enabled)
+        }
+        if (on) {
+            Text(
+                text = stringResource(R.string.drawing_note),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)

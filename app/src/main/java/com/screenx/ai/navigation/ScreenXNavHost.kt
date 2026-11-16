@@ -1,23 +1,27 @@
 package com.screenx.ai.navigation
 
+import android.net.Uri
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ContentCut
-import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.screenx.ai.R
 import com.screenx.ai.presentation.common.PlaceholderScreen
+import com.screenx.ai.presentation.editor.EditorPickerScreen
+import com.screenx.ai.presentation.editor.EditorScreen
 import com.screenx.ai.presentation.home.HomeScreen
+import com.screenx.ai.presentation.library.RecordingsScreen
+import com.screenx.ai.presentation.library.ScreenshotsScreen
 
 @Composable
 fun ScreenXNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
@@ -34,13 +38,20 @@ fun ScreenXNavHost(navController: NavHostController, modifier: Modifier = Modifi
             HomeScreen(onNavigate = { navController.navigateToTopLevel(it.route) })
         }
         composable(Screen.Recordings.route) {
-            PlaceholderScreen(stringResource(R.string.nav_recordings), Icons.Rounded.VideoLibrary, phase = 9)
+            RecordingsScreen(onEdit = { navController.navigate(Routes.edit(it.uri)) })
         }
-        composable(Screen.Screenshots.route) {
-            PlaceholderScreen(stringResource(R.string.nav_screenshots), Icons.Rounded.Image, phase = 9)
-        }
+        composable(Screen.Screenshots.route) { ScreenshotsScreen() }
         composable(Screen.Editor.route) {
-            PlaceholderScreen(stringResource(R.string.title_editor), Icons.Rounded.ContentCut, phase = 10)
+            EditorPickerScreen(onPick = { navController.navigate(Routes.edit(it.uri)) })
+        }
+        composable(
+            route = Routes.EDIT_PATTERN,
+            arguments = listOf(navArgument("uri") { type = NavType.StringType })
+        ) { entry ->
+            val raw = entry.arguments?.getString("uri")
+            if (raw != null) {
+                EditorScreen(uri = Uri.parse(raw), onBack = { navController.popBackStack() })
+            }
         }
         composable(Screen.Settings.route) {
             PlaceholderScreen(stringResource(R.string.nav_settings), Icons.Rounded.Settings, phase = 11)
