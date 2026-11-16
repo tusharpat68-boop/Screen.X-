@@ -15,6 +15,16 @@
     <!-- Phase 06: floating controls. Only requested when the user turns them on. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <!-- Phase 07: face camera. Camera permission is requested only when you record with it on. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.front"
+        android:required="false" />
+
     <application
         android:name=".ScreenXApp"
         android:allowBackup="false"
@@ -27,6 +37,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboard|keyboardHidden|uiMode"
             android:launchMode="singleTop"
             android:theme="@style/Theme.ScreenXAI">
             <intent-filter>
@@ -38,6 +49,23 @@
         <service
             android:name=".service.RecordingService"
             android:exported="false"
-            android:foregroundServiceType="mediaProjection|microphone" />
+            android:foregroundServiceType="mediaProjection|microphone|camera" />
+
+        <!-- Phase 09: one-shot screenshot capture. -->
+        <service
+            android:name=".screenshot.ScreenshotService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
+        <!-- Phase 09: lets other apps open or receive files on Android 8-9 only. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

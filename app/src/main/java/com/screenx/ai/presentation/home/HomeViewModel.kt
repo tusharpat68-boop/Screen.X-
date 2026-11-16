@@ -5,6 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.screenx.ai.ScreenXApp
 import com.screenx.ai.domain.AudioSource
+import com.screenx.ai.domain.CameraLens
+import com.screenx.ai.domain.FacecamConfig
+import com.screenx.ai.domain.FacecamShape
 import com.screenx.ai.domain.FloatingConfig
 import com.screenx.ai.domain.QualityOptions
 import com.screenx.ai.domain.RecordingConfig
@@ -45,6 +48,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val floating: StateFlow<FloatingConfig> = settings.floatingConfig
         .stateIn(viewModelScope, SharingStarted.Eagerly, FloatingConfig())
+
+    val facecam: StateFlow<FacecamConfig> = settings.facecamConfig
+        .stateIn(viewModelScope, SharingStarted.Eagerly, FacecamConfig())
+
+    val drawingEnabled: StateFlow<Boolean> = settings.drawingEnabled
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Resolutions, frame rates and audio sources this device supports. */
     val options: StateFlow<QualityOptions> = config
@@ -89,6 +98,26 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setFloatingOpacity(percent: Int) {
         viewModelScope.launch { settings.setFloatingOpacity(percent) }
+    }
+
+    fun setDrawingEnabled(enabled: Boolean) {
+        viewModelScope.launch { settings.setDrawingEnabled(enabled) }
+    }
+
+    fun setFacecamEnabled(enabled: Boolean) {
+        viewModelScope.launch { settings.setFacecamEnabled(enabled) }
+    }
+
+    fun setFacecamLens(lens: CameraLens) {
+        viewModelScope.launch { settings.setFacecamLens(lens) }
+    }
+
+    fun setFacecamShape(shape: FacecamShape) {
+        viewModelScope.launch { settings.setFacecamShape(shape) }
+    }
+
+    fun setFacecamSize(level: Int) {
+        viewModelScope.launch { settings.setFacecamSize(level) }
     }
 
     fun dismissSaved() = RecordingSession.dismissSaved()

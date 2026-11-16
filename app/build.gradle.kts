@@ -13,8 +13,29 @@ android {
         applicationId = "com.screenx.ai"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.6.0-phase06"
+        versionCode = 13
+        versionName = "0.23.0-phase23"
+    }
+
+    // Release signing is opt-in. Supply these environment variables from a secure
+    // local environment or CI secrets; never commit a keystore or passwords.
+    val releaseStorePath = System.getenv("SCREENX_KEYSTORE_PATH")
+    val releaseStorePassword = System.getenv("SCREENX_KEYSTORE_PASSWORD")
+    val releaseKeyAlias = System.getenv("SCREENX_KEY_ALIAS")
+    val releaseKeyPassword = System.getenv("SCREENX_KEY_PASSWORD")
+    val hasReleaseSigning = listOf(
+        releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword
+    ).all { !it.isNullOrBlank() }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("screenxRelease") {
+                storeFile = file(releaseStorePath!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
     }
 
     buildTypes {
@@ -29,7 +50,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Release signing is added in Phase 12.
+            // Without all four SCREENX_* variables this remains an unsigned release build.
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("screenxRelease")
+            }
         }
     }
 
@@ -81,4 +105,6 @@ dependencies {
     implementation(libs.androidx.media3.ui)
     implementation(libs.androidx.media3.transformer)
     implementation(libs.androidx.media3.effect)
+
+    testImplementation("junit:junit:4.13.2")
 }

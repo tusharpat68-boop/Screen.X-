@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
+import android.provider.DocumentsContract
 import androidx.annotation.RequiresApi
 import java.io.File
 import java.io.IOException
@@ -23,7 +24,8 @@ class RecordingOutput(
     val displayName: String,
     val uri: Uri?,
     val file: File?,
-    val pfd: ParcelFileDescriptor?
+    val pfd: ParcelFileDescriptor?,
+    val isSafDocument: Boolean = false
 )
 
 /**
@@ -37,14 +39,32 @@ object RecordingStorage {
     private const val PART_SUFFIX = ".part"
 
     /** [readWrite] is needed when MediaMuxer writes the file (audio recordings). */
-    fun create(context: Context, readWrite: Boolean = false): RecordingOutput {
+    fun create(context: Context, readWrite: Boolean = false, customTreeUri: Uri? = null): RecordingOutput {
         val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
         val name = "ScreenX_$stamp.mp4"
+        if (customTreeUri != null) return createSafDocument(context, customTreeUri, name, readWrite)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             createMediaStore(context, name, readWrite)
         } else {
             createLegacy(context, name)
         }
+    }
+
+    /** Creates the recording inside a user-selected Storage Access Framework tree. */
+    private fun createSafDocument(context: Context, treeUri: Uri, name: String, readWrite: Boolean): RecordingOutput {
+        val resolver = context.contentResolver
+        val documentUri = try {
+            DocumentsContract.createDocument(resolver, treeUri, "video/mp4", name)
+        } catch (e: Exception) {
+            throw IOException("Cannot create file in selected folder", e)
+        } ?: throw IOException("Selected folder did not create a document")
+        val mode = if (readWrite) "rw" else "w"
+        val pfd = try { resolver.openFileDescriptor(documentUri, mode) } catch (e: Exception) { null }
+        if (pfd == null) {
+            runCatching { DocumentsContract.deleteDocument(resolver, documentUri) }
+            throw IOException("Cannot open file in selected folder")
+        }
+        return RecordingOutput(name, documentUri, null, pfd, isSafDocument = true)
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
@@ -82,18 +102,40 @@ object RecordingStorage {
      * Makes a finished recording visible. Returns its Uri on Android 10+.
      * On Android 8-9 the Uri arrives later through [onUriReady] (after the media scan).
      */
+    @Throws(IOException::class)
     fun finalize(context: Context, out: RecordingOutput, onUriReady: (Uri?) -> Unit): Uri? {
+        if (out.isSafDocument && out.uri != null) {
+            runCatching { out.pfd?.close() }
+            val hasContent = try {
+                context.contentResolver.openInputStream(out.uri)?.use { it.read() >= 0 } ?: false
+            } catch (e: Exception) {
+                false
+            }
+            if (!hasContent) {
+                runCatching { DocumentsContract.deleteDocument(context.contentResolver, out.uri) }
+                throw IOException("Selected-folder recording is empty or unreadable")
+            }
+            return out.uri
+        }
         if (out.uri != null) {
             runCatching { out.pfd?.close() }
             val values = ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }
-            context.contentResolver.update(out.uri, values, null, null)
+            val updated = try {
+                context.contentResolver.update(out.uri, values, null, null)
+            } catch (e: Exception) {
+                runCatching { context.contentResolver.delete(out.uri, null, null) }
+                throw IOException("Could not publish recording to MediaStore", e)
+            }
+            if (updated <= 0) {
+                runCatching { context.contentResolver.delete(out.uri, null, null) }
+                throw IOException("Recording was written but could not be published")
+            }
             return out.uri
         }
-        val part = out.file ?: return null
+        val part = out.file ?: throw IOException("Recording output is unavailable")
         val finalFile = File(part.parentFile, out.displayName)
         if (!part.renameTo(finalFile)) {
-            onUriReady(null)
-            return null
+            throw IOException("Could not finalize recording file")
         }
         MediaScannerConnection.scanFile(
             context, arrayOf(finalFile.absolutePath), arrayOf("video/mp4")
@@ -104,7 +146,12 @@ object RecordingStorage {
     /** Deletes an unfinished recording. */
     fun discard(context: Context, out: RecordingOutput) {
         runCatching { out.pfd?.close() }
-        out.uri?.let { runCatching { context.contentResolver.delete(it, null, null) } }
+        out.uri?.let { uri ->
+            runCatching {
+                if (out.isSafDocument) DocumentsContract.deleteDocument(context.contentResolver, uri)
+                else context.contentResolver.delete(uri, null, null)
+            }
+        }
         out.file?.let { runCatching { it.delete() } }
     }
 

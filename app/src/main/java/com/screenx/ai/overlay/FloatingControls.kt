@@ -27,7 +27,8 @@ import kotlin.math.max
 /**
  * Draggable floating recording controller drawn over other apps (needs the overlay permission).
  * Collapsed: a small round bubble with a blinking record dot. Expanded: timer, pause/resume,
- * stop, minimize and hide. It is part of the screen, so it also appears in the recording.
+ * optional camera and drawing buttons, stop and hide. Tap the red dot to collapse it again. It is part of the screen, so it also appears
+ * in the recording.
  */
 class FloatingControls(
     context: Context,
@@ -36,12 +37,20 @@ class FloatingControls(
     private val onResume: () -> Unit,
     private val onStop: () -> Unit,
     private val onHide: () -> Unit,
-    private val onMoved: (x: Int, y: Int) -> Unit
+    private val onMoved: (x: Int, y: Int) -> Unit,
+    onToggleCamera: (() -> Unit)? = null,
+    onToggleDrawing: (() -> Unit)? = null
 ) {
     private val ctx = context.applicationContext
     private val wm = ctx.getSystemService(WindowManager::class.java)
     private val density = ctx.resources.displayMetrics.density
-    private val unit = (when (config.sizeLevel) { 0 -> 40; 2 -> 64; else -> 52 } * density).toInt()
+    // Button size: the chosen size, shrunk if needed so the expanded row fits the screen width.
+    private val unit: Int = run {
+        val desired = (when (config.sizeLevel) { 0 -> 40; 2 -> 64; else -> 52 } * density).toInt()
+        val slots = 5.4f + (if (onToggleCamera != null) 1f else 0f) + (if (onToggleDrawing != null) 1f else 0f)
+        val available = ctx.resources.displayMetrics.widthPixels - 24 * density
+        minOf(desired, (available / slots).toInt())
+    }
 
     private var expanded = false
     private var attached = false
@@ -91,10 +100,13 @@ class FloatingControls(
     private val playPause = button(R.drawable.ic_overlay_pause, R.string.action_pause) {
         if (paused) onResume() else onPause()
     }
-    private val stop = button(R.drawable.ic_overlay_stop, R.string.action_stop) { onStop() }
-    private val minimize = button(R.drawable.ic_overlay_minimize, R.string.overlay_minimize) {
-        setExpanded(false)
+    private val cameraButton: ImageView? = onToggleCamera?.let { toggle ->
+        button(R.drawable.ic_overlay_camera, R.string.overlay_camera) { toggle() }
     }
+    private val drawButton: ImageView? = onToggleDrawing?.let { toggle ->
+        button(R.drawable.ic_draw_pen, R.string.overlay_drawing) { toggle() }
+    }
+    private val stop = button(R.drawable.ic_overlay_stop, R.string.action_stop) { onStop() }
     private val hide = button(R.drawable.ic_overlay_close, R.string.overlay_hide) { onHide() }
 
     private val blink = ObjectAnimator.ofFloat(dot, View.ALPHA, 1f, 0.25f).apply {
@@ -107,8 +119,9 @@ class FloatingControls(
         container.addView(dot)
         container.addView(timer)
         container.addView(playPause)
+        cameraButton?.let { container.addView(it) }
+        drawButton?.let { container.addView(it) }
         container.addView(stop)
-        container.addView(minimize)
         container.addView(hide)
         applyExpanded()
     }
@@ -162,8 +175,9 @@ class FloatingControls(
         val v = if (expanded) View.VISIBLE else View.GONE
         timer.visibility = v
         playPause.visibility = v
+        cameraButton?.visibility = v
+        drawButton?.visibility = v
         stop.visibility = v
-        minimize.visibility = v
         hide.visibility = v
     }
 

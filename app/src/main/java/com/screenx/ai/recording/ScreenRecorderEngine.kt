@@ -14,6 +14,7 @@ import com.screenx.ai.audio.AudioCaptureException
 import com.screenx.ai.audio.AvMuxer
 import com.screenx.ai.domain.AudioSource
 import com.screenx.ai.domain.RecordingConfig
+import com.screenx.ai.domain.RecordingConfigValidator
 import com.screenx.ai.storage.RecordingOutput
 import com.screenx.ai.storage.RecordingStorage
 import java.io.File
@@ -38,7 +39,8 @@ sealed interface StopOutcome {
  */
 class ScreenRecorderEngine(
     context: Context,
-    private val projection: MediaProjection
+    private val projection: MediaProjection,
+    private val customSaveTreeUri: Uri? = null
 ) {
     private val context: Context = context.applicationContext
 
@@ -58,6 +60,10 @@ class ScreenRecorderEngine(
 
     @Throws(RecordingException::class)
     fun start(config: RecordingConfig) {
+        val configErrors = RecordingConfigValidator.errors(config)
+        if (configErrors.isNotEmpty()) {
+            throw RecordingException(configErrors.joinToString(separator = "; "))
+        }
         val resolved = try {
             ConfigResolver.resolve(context, config)
         } catch (e: UnsupportedConfigException) {
@@ -65,7 +71,7 @@ class ScreenRecorderEngine(
         }
         val withAudio = config.audioSource != AudioSource.NONE
         val out = try {
-            RecordingStorage.create(context, readWrite = withAudio)
+            RecordingStorage.create(context, readWrite = withAudio, customTreeUri = customSaveTreeUri)
         } catch (e: IOException) {
             throw RecordingException(context.getString(R.string.error_storage_create))
         }
@@ -185,10 +191,15 @@ class ScreenRecorderEngine(
             }
         }
 
-        val uri = RecordingStorage.finalize(context, out) { scanned ->
-            RecordingSession.updateSavedUri(out.displayName, scanned?.toString())
+        return try {
+            val uri = RecordingStorage.finalize(context, out) { scanned ->
+                RecordingSession.updateSavedUri(out.displayName, scanned?.toString())
+            }
+            StopOutcome.Saved(out.displayName, uri)
+        } catch (e: IOException) {
+            RecordingStorage.discard(context, out)
+            StopOutcome.Failed(context.getString(R.string.error_storage_create))
         }
-        return StopOutcome.Saved(out.displayName, uri)
     }
 
     /** Stops everything and deletes the unfinished file. Safe to call more than once. */

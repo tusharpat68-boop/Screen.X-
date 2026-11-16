@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">ScreenX AI</string>
+    <string name="recording_countdown">Recording starts in %1$d</string>
 
     <string name="nav_home">Home</string>
     <string name="nav_recordings">Recordings</string>
@@ -76,7 +77,7 @@
     <string name="size_medium">Medium</string>
     <string name="size_large">Large</string>
     <string name="chip_percent">%1$d%%</string>
-    <string name="floating_note">The bubble is part of the screen, so it also appears in your video. Drag it aside, minimize it, or hide it with the X and bring it back from the notification.</string>
+    <string name="floating_note">The bubble is part of the screen, so it also appears in your video. Drag it aside, tap the red dot to minimize it, or hide it with the X and bring it back from the notification.</string>
     <string name="perm_overlay_denied">Overlay permission was not granted, so floating controls stay off.</string>
     <string name="warn_overlay_missing">Floating controls need the overlay permission.</string>
     <string name="warn_overlay_failed">Could not show the floating controls.</string>
@@ -84,6 +85,137 @@
     <string name="action_hide_controls">Hide controls</string>
     <string name="overlay_minimize">Minimize</string>
     <string name="overlay_hide">Hide controls</string>
+
+    <string name="home_facecam">Face camera</string>
+    <string name="facecam_enable">Show your camera in the recording</string>
+    <string name="facecam_no_camera">No camera found on this device</string>
+    <string name="facecam_camera">Camera</string>
+    <string name="lens_front">Front</string>
+    <string name="lens_back">Back</string>
+    <string name="facecam_shape">Shape</string>
+    <string name="shape_circle">Circle</string>
+    <string name="shape_rectangle">Rectangle</string>
+    <string name="size_xlarge">Extra large</string>
+    <string name="facecam_note">Tap the bubble to flip the camera, long-press it to turn the camera off, or use the camera button in the floating controls. The bubble appears in your video and Android shows its camera indicator while the camera is on.</string>
+    <string name="perm_camera_denied">Camera permission was denied, so this recording will start without the face camera.</string>
+    <string name="warn_facecam_overlay">The face camera needs the overlay permission, so it is off for this recording.</string>
+    <string name="warn_camera_unavailable">Camera problem (%1$s). Recording continues without the face camera.</string>
+    <string name="camera_flip_unavailable">The other camera is not available on this device.</string>
+    <string name="overlay_camera">Camera on or off</string>
+
+    <string name="home_drawing">Drawing tools</string>
+    <string name="drawing_enable">Annotate your screen while recording</string>
+    <string name="drawing_note">A small pen bubble appears while recording. Tap it to open the toolbar. Use the cursor button to use your apps normally while your drawings stay visible. Drawings and the toolbar appear in your video.</string>
+    <string name="overlay_drawing">Drawing tools</string>
+    <string name="draw_pen">Pen</string>
+    <string name="draw_highlighter">Highlighter</string>
+    <string name="draw_eraser">Eraser</string>
+    <string name="draw_arrow">Arrow</string>
+    <string name="draw_circle">Circle</string>
+    <string name="draw_rect">Rectangle</string>
+    <string name="draw_color">Color</string>
+    <string name="draw_size">Brush size</string>
+    <string name="draw_undo">Undo</string>
+    <string name="draw_clear">Clear drawing</string>
+    <string name="draw_interact">Use your apps (cursor mode)</string>
+    <string name="draw_hide">Hide drawing tools</string>
+
+    <string name="rec_summary">%1$d videos · %2$s</string>
+    <string name="rec_search_hint">Search recordings</string>
+    <string name="rec_empty">No recordings yet. Record something and it will appear here.</string>
+    <string name="rec_empty_search">Nothing matches your search or filter.</string>
+    <string name="sort_newest">Newest</string>
+    <string name="sort_oldest">Oldest</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_size">Largest</string>
+    <string name="sort_duration">Longest</string>
+    <string name="filter_favorites">Favorites</string>
+    <string name="favorite_add">Add to favorites</string>
+    <string name="favorite_remove">Remove from favorites</string>
+
+    <string name="menu_play">Play</string>
+    <string name="menu_share">Share</string>
+    <string name="menu_rename">Rename</string>
+    <string name="menu_details">Details</string>
+    <string name="menu_delete">Delete</string>
+
+    <string name="dialog_rename_title">Rename</string>
+    <string name="dialog_rename_label">Name</string>
+    <string name="dialog_delete_title">Delete permanently?</string>
+    <string name="dialog_delete_body">%1$s will be deleted and cannot be restored.</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_save">Save</string>
+    <string name="dialog_close">Close</string>
+
+    <string name="details_title">Details</string>
+    <string name="details_name">Name</string>
+    <string name="details_location">Location</string>
+    <string name="details_resolution">Resolution</string>
+    <string name="details_fps">Frame rate</string>
+    <string name="details_fps_value">%1$d FPS (average)</string>
+    <string name="details_duration">Duration</string>
+    <string name="details_size">Size</string>
+    <string name="details_bitrate">Bitrate</string>
+    <string name="details_bitrate_value">%1$d kbps (average)</string>
+    <string name="details_date">Date</string>
+    <string name="details_unknown">Unknown</string>
+
+    <string name="msg_deleted">Deleted</string>
+    <string name="msg_renamed">Renamed</string>
+    <string name="err_invalid_name">Please enter a valid name.</string>
+    <string name="err_name_exists">A file with that name already exists.</string>
+    <string name="err_operation_failed">That did not work. Please try again.</string>
+
+    <string name="shots_summary">%1$d screenshots</string>
+    <string name="shots_capture">Capture screenshot</string>
+    <string name="shots_delay">Delay</string>
+    <string name="delay_now">Now</string>
+    <string name="delay_seconds">%1$d s</string>
+    <string name="shots_note">Android asks for screen-capture permission each time. With a delay, ScreenX moves to the background so you can open what you want to capture.</string>
+    <string name="shots_blocked">Screenshots are unavailable while recording. Stop the recording first.</string>
+    <string name="shots_saved">Screenshot saved</string>
+    <string name="shots_failed">Could not take the screenshot.</string>
+    <string name="shots_empty">No screenshots yet.</string>
+    <string name="notif_shot_countdown">Screenshot in %1$d s</string>
+    <string name="notif_shot_taking">Taking screenshot…</string>
+
+    <string name="menu_edit">Edit</string>
+    <string name="editor_pick_hint">Choose a recording to edit</string>
+    <string name="editor_pick_empty">Record something first, then edit it here.</string>
+    <string name="editor_back">Back</string>
+    <string name="editor_error_load">Could not open this video.</string>
+    <string name="editor_play">Play</string>
+    <string name="editor_trim">Trim</string>
+    <string name="editor_start">Start</string>
+    <string name="editor_end">End</string>
+    <string name="editor_length">Length: %1$s</string>
+    <string name="editor_set_start">Start here</string>
+    <string name="editor_set_end">End here</string>
+    <string name="editor_rotate">Rotate and crop</string>
+    <string name="editor_rotate_left">Left</string>
+    <string name="editor_rotate_right">Right</string>
+    <string name="editor_crop">Crop (centered)</string>
+    <string name="crop_original">Original</string>
+    <string name="crop_square">1:1</string>
+    <string name="crop_wide">16:9</string>
+    <string name="crop_tall">9:16</string>
+    <string name="crop_classic">4:3</string>
+    <string name="crop_portrait">3:4</string>
+    <string name="editor_quality">Export quality</string>
+    <string name="quality_low">Low · 480p</string>
+    <string name="quality_medium">Medium · 720p</string>
+    <string name="quality_high">High · 1080p</string>
+    <string name="quality_original">Original size</string>
+    <string name="editor_export">Export video</string>
+    <string name="editor_extract_audio">Extract audio</string>
+    <string name="editor_no_audio">This video has no audio track.</string>
+    <string name="editor_note">Edits are saved as a new file and your original recording is not changed. Stay on this screen while exporting.</string>
+    <string name="editor_exporting">Exporting video… %1$d%%</string>
+    <string name="editor_extracting">Extracting audio… %1$d%%</string>
+    <string name="editor_saved_video">Saved as %1$s in Movies/ScreenX</string>
+    <string name="editor_saved_audio">Audio saved as %1$s in Music/ScreenX</string>
+    <string name="editor_save_failed">The edited file could not be saved.</string>
+    <string name="editor_failed">Export failed: %1$s</string>
 
     <string name="placeholder_phase">Arrives in Phase %1$d</string>
 </resources>
